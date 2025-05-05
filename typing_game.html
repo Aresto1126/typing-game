@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>タイピングゲーム</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f4f4;
+      text-align: center;
+      padding: 0;
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    #word {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      font-size: 24px;
+      padding: 10px;
+      width: 300px;
+    }
+    #score, #timer, #miss, #accuracy, #speed {
+      font-size: 18px;
+      margin: 10px;
+    }
+    #result {
+      font-size: 20px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    #nextWord {
+      opacity: 0.5;
+      font-size: 16px;
+      margin-top: -10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>タイピングゲーム</h1>
+  <div id="timer">残り時間: 60秒</div>
+  <div id="score">正解数: 0</div>
+  <div id="miss">ミスタイプ数: 0</div>
+  <div id="accuracy">正解率: 0%</div>
+  <div id="speed">平均タイプ数: 0.00 / 秒（正解文字数 ÷ 経過秒）</div>
+    <div id="word">クリックしてスタート</div>
+  <div id="nextWord"></div>
+  <input type="text" id="input" disabled placeholder="ここに入力" />
+  <br><br>
+  <button onclick="startGame()">スタート</button>
+  <button onclick="retireGame()">リタイア</button>
+  <div id="result"></div>
+
+  <script>
+    const wordPairs = [
+      { kana: "しんぶん", romas: ["sinnbunn"] },
+      { kana: "りんご", romas: ["rinngo"] },
+      { kana: "ばなな", romas: ["banana"] },
+      { kana: "ぶどう", romas: ["budou"] },
+      { kana: "ちず", romas: ["tizu"] },
+      { kana: "パソコン", romas: ["pasokonn"] },
+      { kana: "マウス", romas: ["mausu"] },
+      { kana: "ディスプレイ", romas: ["delisupurei"] },
+      { kana: "キーボード", romas: ["ki-bo-do"] },
+      { kana: "スマートフォン", romas: ["suma-tohulonn"] },
+      { kana: "データベース", romas: ["de-tabe-su"] },
+      { kana: "やま", romas: ["yama"] },
+      { kana: "かわ", romas: ["kawa"] },
+      { kana: "そら", romas: ["sora"] },
+      { kana: "ほし", romas: ["hosi"] },
+      { kana: "くも", romas: ["kumo"] },
+      { kana: "はな", romas: ["hana"] },
+      { kana: "ひかり", romas: ["hikari"] },
+      { kana: "ゆき", romas: ["yuki"] },
+      { kana: "あめ", romas: ["ame"] },
+      { kana: "かぜ", romas: ["kaze"] },
+      { kana: "みかん", romas: ["mikann"] },
+      { kana: "てがみ", romas: ["tegami"] },
+      { kana: "じてんしゃ", romas: ["zitennsya"] },
+      { kana: "おんがく", romas: ["onngaku"] },
+      { kana: "たいいく", romas: ["taiiku"] }
+    ];
+
+    let currentWord = {};
+    let nextWordData = {};
+    let wordStartTime = 0;
+    let score = 0;
+    let totalTypedChars = 0;
+    let miss = 0;
+    let time = 60;
+    let timerInterval;
+    let elapsedSeconds = 0;
+
+    const wordEl = document.getElementById("word");
+    const inputEl = document.getElementById("input");
+    const scoreEl = document.getElementById("score");
+    const missEl = document.getElementById("miss");
+    const timerEl = document.getElementById("timer");
+    const accuracyEl = document.getElementById("accuracy");
+    const resultEl = document.getElementById("result");
+    const speedEl = document.getElementById("speed");
+        const nextWordEl = document.getElementById("nextWord");
+
+    function startGame() {
+      elapsedSeconds = 0;
+      score = 0;
+      miss = 0;
+      totalTypedChars = 0;
+      time = 60;
+      inputEl.disabled = false;
+      inputEl.value = "";
+      inputEl.focus();
+      scoreEl.textContent = "正解数: 0";
+      missEl.textContent = "ミスタイプ数: 0";
+      accuracyEl.textContent = "正解率: 0%";
+      speedEl.textContent = "平均タイプ数: 0.00 / 秒（正解文字数 ÷ 経過秒）";
+      resultEl.textContent = "";
+      prepareNextWord();
+      loadNextWord();
+      timerEl.textContent = `残り時間: ${time}秒`;
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        time--;
+        elapsedSeconds++;
+        timerEl.textContent = `残り時間: ${time}秒`;
+        if (time <= 0) {
+          clearInterval(timerInterval);
+          endGame("時間切れ");
+        }
+      }, 1000);
+    }
+
+    function prepareNextWord() {
+      let preview;
+      do {
+        preview = wordPairs[Math.floor(Math.random() * wordPairs.length)];
+      } while (preview === currentWord);
+      nextWordData = preview;
+      nextWordEl.textContent = `次の問題: ${nextWordData.kana}`;
+    }
+
+    function loadNextWord() {
+      currentWord = nextWordData;
+      wordEl.textContent = currentWord.kana;
+      wordStartTime = Date.now();
+      inputEl.value = "";
+      prepareNextWord();
+    }
+
+    function retireGame() {
+      clearInterval(timerInterval);
+      endGame("リタイアしました");
+    }
+
+    function endGame(message) {
+      clearInterval(timerInterval);
+      inputEl.disabled = true;
+      wordEl.textContent = `ゲーム終了！(${message})`;
+      const total = score + miss;
+      const accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
+      const averageSpeed = elapsedSeconds > 0 ? (totalTypedChars / elapsedSeconds).toFixed(2) : "0.00";
+      accuracyEl.textContent = `正解率: ${accuracy}%`;
+      speedEl.textContent = `平均タイプ数: ${averageSpeed} / 秒（正解文字数 ÷ 経過秒）`;
+            resultEl.textContent = `結果：${message}｜正解数：${score} / ${score + miss}問｜ミスタイプ数：${miss}｜正解率：${accuracy}%｜平均タイプ数：${averageSpeed} / 秒`;
+    }
+
+    inputEl.addEventListener("input", function () {
+      let typed = inputEl.value.toLowerCase();
+      let matched = false;
+
+      for (const roma of currentWord.romas) {
+        if (roma.startsWith(typed)) {
+          matched = true;
+          if (typed === roma) {
+            const timeTaken = (Date.now() - wordStartTime) / 1000;
+            score++;
+            totalTypedChars += typed.length;
+            scoreEl.textContent = `正解数: ${score}`;
+            updateAccuracy();
+            speedEl.textContent = `この単語のタイプ速度: ${(typed.length / timeTaken).toFixed(2)} タイプ/秒`;
+            loadNextWord();
+            return;
+          }
+        }
+      }
+
+      if (!matched) {
+        playBeep();
+        inputEl.style.backgroundColor = '#fdd';
+        setTimeout(() => inputEl.style.backgroundColor = '', 200);
+        miss++;
+        missEl.textContent = `ミスタイプ数: ${miss}`;
+        updateAccuracy();
+        inputEl.value = inputEl.value.slice(0, -1);
+      }
+    });
+
+    function updateAccuracy() {
+      const total = score + miss;
+      const accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
+      accuracyEl.textContent = `正解率: ${accuracy}%`;
+    }
+  function playBeep() {
+  const context = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = context.createOscillator();
+  const gainNode = context.createGain();
+  gainNode.gain.setValueAtTime(0.05, context.currentTime); // 音量を下げる
+
+  oscillator.type = 'square';
+  oscillator.frequency.setValueAtTime(440, context.currentTime);
+  oscillator.connect(gainNode);
+  gainNode.connect(context.destination);
+
+  oscillator.start();
+  oscillator.stop(context.currentTime + 0.1);
+}
+
+</script>
+</body>
+</html>
